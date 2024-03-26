@@ -1,1 +1,1 @@
-# Rupture_Net
+# Rupture_Net2D
