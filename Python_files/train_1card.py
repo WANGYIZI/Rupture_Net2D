@@ -112,34 +112,12 @@ csv_files_200lines = [
     "./datasets/Ainlabel1.csv",
     # "./datasets/Ainlabel2.csv",
     "./datasets/Ainlabel3.csv",
-    # the above files are homogeneous rupture  A0-A3 (except A2 for testing)
+    "./datasets/Ainlabel68.csv",
+    "./datasets/Ainlabel69.csv",
+    # the above files are homogeneous rupture  A0-A3 A68-69 (except A2 for testing)
     # all of the above samples are complete rupture
 
-    "./datasets/Ainlabel15.csv",
-    "./datasets/Ainlabel16.csv",
-    "./datasets/Ainlabel17.csv",
-    "./datasets/Ainlabel18.csv",
-    "./datasets/Ainlabel24.csv",
-    "./datasets/Ainlabel25.csv",
-    "./datasets/Ainlabel26.csv",
-    "./datasets/Ainlabel27.csv",
-    "./datasets/Ainlabel28.csv",
-    "./datasets/Ainlabel29.csv",
-    "./datasets/Ainlabel30.csv",
-    "./datasets/Ainlabel31.csv",
-    "./datasets/Ainlabel32.csv",
-    "./datasets/Ainlabel33.csv",
-    "./datasets/Ainlabel34.csv",
-    "./datasets/Ainlabel35.csv",
-    "./datasets/Ainlabel36.csv",
-    "./datasets/Ainlabel37.csv",
-    "./datasets/Ainlabel38.csv",
-    "./datasets/Ainlabel39.csv",
-    "./datasets/Ainlabel40.csv",
-    "./datasets/Ainlabel41.csv",
-    "./datasets/Ainlabel42.csv",
-    "./datasets/Ainlabel43.csv",
-    "./datasets/Ainlabel44.csv",
+   
     "./datasets/Ainlabel45.csv",
     "./datasets/Ainlabel46.csv",
     "./datasets/Ainlabel47.csv",
@@ -161,79 +139,22 @@ csv_files_200lines = [
     "./datasets/Ainlabel65.csv",
     # "./datasets/Ainlabel66.csv",
     # "./datasets/Ainlabel67.csv",
-    "./datasets/Ainlabel68.csv",
-    "./datasets/Ainlabel69.csv",
+
     # the above files are One-Asperity "global rupture"
     # A 49-51, 66-67 for testing
 
 
-    "./datasets/Ainlabel72.csv",
-    "./datasets/Ainlabel73.csv",
-    "./datasets/Ainlabel74.csv",
-    "./datasets/Ainlabel75.csv",
-    "./datasets/Ainlabel76.csv",
-    "./datasets/Ainlabel77.csv",
-    "./datasets/Ainlabel78.csv",
+   
     # "./datasets/Ainlabel79.csv",
-    "./datasets/Ainlabel80.csv",
-    "./datasets/Ainlabel81.csv",
-    "./datasets/Ainlabel82.csv",
-    "./datasets/Ainlabel83.csv",
-    "./datasets/Ainlabel84.csv",
-    "./datasets/Ainlabel85.csv",
-    "./datasets/Ainlabel86.csv",
-    "./datasets/Ainlabel87.csv",
-    "./datasets/Ainlabel88.csv",
-    "./datasets/Ainlabel89.csv",
-    "./datasets/Ainlabel90.csv",
+  
     # "./datasets/Ainlabel91.csv",
-    "./datasets/Ainlabel92.csv",
-    "./datasets/Ainlabel93.csv",
-    "./datasets/Ainlabel94.csv",
+    
     # "./datasets/Ainlabel96.csv",
-    "./datasets/Ainlabel100.csv",
-    "./datasets/Ainlabel101.csv",
-    "./datasets/Ainlabel102.csv",
-    "./datasets/Ainlabel103.csv",
-    "./datasets/Ainlabel104.csv",
-    "./datasets/Ainlabel105.csv",
-    "./datasets/Ainlabel106.csv",
-    "./datasets/Ainlabel107.csv",
-    "./datasets/Ainlabel108.csv",
+    
     # "./datasets/Ainlabel109.csv",
-    "./datasets/Ainlabel110.csv",
-    "./datasets/Ainlabel111.csv",
-    "./datasets/Ainlabel112.csv",
-    "./datasets/Ainlabel113.csv",
-    "./datasets/Ainlabel114.csv",
-    "./datasets/Ainlabel115.csv",
-    "./datasets/Ainlabel116.csv",
-    "./datasets/Ainlabel117.csv",
-    "./datasets/Ainlabel118.csv",
+  
     # "./datasets/Ainlabel119.csv",
-    "./datasets/Ainlabel120.csv",
-    "./datasets/Ainlabel121.csv",
-    "./datasets/Ainlabel122.csv",
-    "./datasets/Ainlabel123.csv",
-    "./datasets/Ainlabel124.csv",
-    "./datasets/Ainlabel125.csv",
-    "./datasets/Ainlabel126.csv",
-    "./datasets/Ainlabel127.csv",
-    "./datasets/Ainlabel128.csv",
-    "./datasets/Ainlabel129.csv",
-    "./datasets/Ainlabel130.csv",
-    "./datasets/Ainlabel131.csv",
-    "./datasets/Ainlabel132.csv",
-    "./datasets/Ainlabel133.csv",
-    "./datasets/Ainlabel134.csv",
-    "./datasets/Ainlabel135.csv",
-    "./datasets/Ainlabel136.csv",
-    "./datasets/Ainlabel137.csv",
-    "./datasets/Ainlabel138.csv",
-    "./datasets/Ainlabel139.csv",
-    "./datasets/Ainlabel140.csv",
-    "./datasets/Ainlabel141.csv",
-    "./datasets/Ainlabel142.csv",
+    
     "./datasets/Ainlabel143.csv",
     "./datasets/Ainlabel144.csv",
     "./datasets/Ainlabel145.csv",
@@ -276,6 +197,11 @@ csv_files_200lines = [
     "./datasets/Ainlabel182.csv",
     "./datasets/Ainlabel183.csv",
     # "./datasets/Ainlabel184.csv",
+    # "./datasets/Ainlabel185.csv",
+    # "./datasets/Ainlabel186.csv",
+    # "./datasets/Ainlabel187.csv",
+    # "./datasets/Ainlabel188.csv",
+    # "./datasets/Ainlabel189.csv",
     # the above files are Two-Asperity "global rupture"
     # A 49-51, 66-67, 79, 91, 109, 119, 184, and 185-189 for testing
 
@@ -440,6 +366,11 @@ csv_files_200lines = [
     "./datasets/Binlabel182.csv",
     "./datasets/Binlabel183.csv",
     # "./datasets/Binlabel184.csv",
+    "./datasets/Binlabel185.csv",
+    "./datasets/Binlabel186.csv",
+    "./datasets/Binlabel187.csv",
+    "./datasets/Binlabel188.csv",
+    "./datasets/Binlabel189.csv",
     # the above files are Two-Asperity "imcomplete rupture"
     # B66-67, 79, 91, 109, 119, 184, and 185-189 for testing
 ]
@@ -455,7 +386,7 @@ csv_files_100lines = [
     # "./datasets/inlabel37.csv",
     # "./datasets/inlabel38.csv",
     # "./datasets/inlabel39.csv",
-
+# one sample takes 100 lines here
 ]
 # Read all csv files for training
 data_frames = []
@@ -476,7 +407,7 @@ for csv_file in csv_files_100lines:
     df = read_100_lines((csv_file))
     df["Logic"] = 1.0
     df["StrengthwithNuc"] = 20.0
-    df["RuptureEnergy"] = (0.5 * df["Lnuc"] * df["StrengthDrop"] ** 2) / (1.158 * mu) # RuptureEnergy directly introduced
+    df["RuptureEnergy"] = (0.5 * df["Lnuc"] * df["StrengthDrop"] ** 2) / (1.158 * mu) # FractureEnergy directly introduced
     df["RuptureEnergy"] = df["RuptureEnergy"].astype(float)  # Converts the data type to floating point
     print(df.shape)
     data_frames.append(df)
