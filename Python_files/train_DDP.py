@@ -235,19 +235,21 @@ if __name__ == '__main__':
     global_fracture = 0
     partial_fracture = 0
 
-    max_Lnuc, min_Lnuc = -np.Inf, np.Inf
-    max_X, min_X = -np.Inf, np.Inf
-    max_StrengthDrop, min_StrengthDrop = -np.Inf, np.Inf
-    max_StressDrop, min_StressDrop = -np.Inf, np.Inf
-    max_Front, min_Front = -np.Inf, np.Inf
-    max_Slip, min_Slip = -np.Inf, np.Inf
-    max_Logic, min_Logic = -np.Inf, np.Inf
-    max_StrengthwithNuc, min_StrengthwithNuc = -np.Inf, np.Inf
-    max_RuptureEnergy, min_RuptureEnergy = -np.Inf, np.Inf
-    mu = 1   #shear elasticity
+    max_Lnuc, min_Lnuc = -np.Inf, np.Inf                                     # Nucleation length
+    max_X, min_X = -np.Inf, np.Inf                                           # Nucleation position
+    max_StrengthDrop, min_StrengthDrop = -np.Inf, np.Inf                     # Max and Min StrengthDrop
+    max_StressDrop, min_StressDrop = -np.Inf, np.Inf                         # Max and Min StressDrop
+    max_Front, min_Front = -np.Inf, np.Inf                                   # Max and Min RuptureTime
+    max_Slip, min_Slip = -np.Inf, np.Inf                                     # Max and Min FinalSlip
+    max_Logic, min_Logic = -np.Inf, np.Inf                                   # Reveal whether or not rupture at the position
+    max_StrengthwithNuc, min_StrengthwithNuc = -np.Inf, np.Inf               # Reveal nucleation information
+    max_RuptureEnergy, min_RuptureEnergy = -np.Inf, np.Inf                   # Max and Min FractureEnergy
+    mu = 32.04                                                               #shear elasticity
 
 
     # scale range below
+    # The list represents the maximum or minimum values from left to right
+    # max_Lnuc, max_X*, max_StrengthDrop, max_StressDrop,max_RuptureTime, max_Slip, max_Logic, max_StrengthwithNuc, max_RuptureEnergy
     column_max = [16.239269, 97.6, 125.064626, 66.054391, 59.647999, 86.057297, 1, 102.996661, 20855.37742025637]
     # column_max[8] = max(0.5 * Lnuc * StrengthDrop ^ 2)
     column_min = [0.003045, -44.8, 4.100412, -10.37305, 0.0, 0.0, 0, -10.37305, 0.7013907496639992]
