@@ -16,33 +16,21 @@ def read_100_lines(csv_files):
                      ,names=["Lnuc" ,"X" ,"StrengthDrop" ,"StressDrop" ,"Front" ,"Slip" ,"Logic" ,"StrengthwithNuc"])
     return df
 
-max_Lnuc, min_Lnuc = -np.Inf ,np.Inf
-max_X, min_X = -np.Inf, np.Inf
-max_StrengthDrop, min_StrengthDrop = -np.Inf, np.Inf
-max_StressDrop, min_StressDrop = -np.Inf, np.Inf
-max_Front, min_Front= -np.Inf, np.Inf
-max_Slip, min_Slip = -np.Inf, np.Inf
-max_Logic, min_Logic = -np.Inf ,np.Inf
-max_StrengthwithNuc, min_StrengthwithNuc = -np.Inf, np.Inf
-max_RuptureEnergy, min_RuptureEnergy = -np.Inf, np.Inf
-
-
-
-# Print Maximum and Minimum
-print("Lnuc maximum:  " +str(max_Lnuc ) +"   minimum:  " +str(min_Lnuc))
-print("X maximum:  " +str(max_X ) +"   minimum:  " +str(min_X))
-print("StrengthDrop maximum:  " +str(max_StrengthDrop ) +"   minimum:  " +str(min_StrengthDrop))
-print("StressDrop maximum:  " +str(max_StressDrop ) +"   minimum:  " +str(min_StressDrop))
-
-print("Front maximum:  " +str(max_Front ) +"   minimum:  " +str(min_Front))
-print("Slip maximum:  " +str(max_Slip ) +"   minimum:  " +str(min_Slip))
-print("Logic maximum:  " +str(max_Logic ) +"   minimum:  " +str(min_Logic))
-print("StrengthwithNuc maximum:  " +str(max_StrengthwithNuc ) +"   minimum:  " +str(min_StrengthwithNuc))
-print("RuptureEnergy maximum:  " +str(max_RuptureEnergy ) +"   minimum:  " +str(min_RuptureEnergy))
-mu = 32.04  #shear elasticity in Gpa(10^9 pa)
+max_Lnuc, min_Lnuc = -np.Inf, np.Inf                                     # Nucleation length
+max_X, min_X = -np.Inf, np.Inf                                           # Nucleation position
+max_StrengthDrop, min_StrengthDrop = -np.Inf, np.Inf                     # Max and Min StrengthDrop
+max_StressDrop, min_StressDrop = -np.Inf, np.Inf                         # Max and Min StressDrop
+max_Front, min_Front = -np.Inf, np.Inf                                   # Max and Min RuptureTime
+max_Slip, min_Slip = -np.Inf, np.Inf                                     # Max and Min FinalSlip
+max_Logic, min_Logic = -np.Inf, np.Inf                                   # Reveal whether or not rupture at the position
+max_StrengthwithNuc, min_StrengthwithNuc = -np.Inf, np.Inf               # Reveal nucleation information
+max_RuptureEnergy, min_RuptureEnergy = -np.Inf, np.Inf                   # Max and Min FractureEnergy
+mu = 32.04                                                               #shear elasticity
 
 
 # scale range below
+# The list represents the maximum or minimum values from left to right
+# max_Lnuc, max_X*, max_StrengthDrop, max_StressDrop,max_RuptureTime, max_Slip, max_Logic, max_StrengthwithNuc, max_RuptureEnergy
 column_max = [16.239269, 97.6, 125.064626, 66.054391, 59.647999, 86.057297, 1, 102.996661, 20855.37742025637]
 # column_max[8] = max(0.5 * Lnuc * StrengthDrop ^ 2)
 column_min = [0.003045, -44.8, 4.100412, -10.37305, 0.0, 0.0, 0, -10.37305, 0.7013907496639992]
