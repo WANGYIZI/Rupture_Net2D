@@ -894,7 +894,6 @@ source ~/minconda/bin/activate base
 conda activate pytorch1.11_cuda11.3_cp39
 conda activate torch1110cu13
 python -m  torch.distributed.run --nproc_per_node=2 --master_port=1238 test.py --device_ids=0,1
-salloc -p ksagnormal -N 1 -n 12 --gres=gpu:1
-netstat-ntlp | grep 1234
-sbatch -p xhhgnormal -N 1 -n 16 -x e03r02 --gres=gpu:2 subtest.sh
+salloc -p GPUResourceQueue -N 1 -n 12 --gres=gpu:1
+sbatch -p GPUResourceQueue -N 1 -n 16 -x e03r02 --gres=gpu:2 subtest.sh
 '''
