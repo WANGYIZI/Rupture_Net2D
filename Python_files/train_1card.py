@@ -16,15 +16,15 @@ def read_100_lines(csv_files):
                      ,names=["Lnuc" ,"X" ,"StrengthDrop" ,"StressDrop" ,"Front" ,"Slip" ,"Logic" ,"StrengthwithNuc"])
     return df
 
-max_Lnuc, min_Lnuc = -np.Inf, np.Inf                                     # Nucleation length
-max_X, min_X = -np.Inf, np.Inf                                           # Nucleation position
-max_StrengthDrop, min_StrengthDrop = -np.Inf, np.Inf                     # Max and Min StrengthDrop
-max_StressDrop, min_StressDrop = -np.Inf, np.Inf                         # Max and Min StressDrop
-max_Front, min_Front = -np.Inf, np.Inf                                   # Max and Min RuptureTime
-max_Slip, min_Slip = -np.Inf, np.Inf                                     # Max and Min FinalSlip
-max_Logic, min_Logic = -np.Inf, np.Inf                                   # Reveal whether or not rupture at the position
-max_StrengthwithNuc, min_StrengthwithNuc = -np.Inf, np.Inf               # Reveal nucleation information
-max_RuptureEnergy, min_RuptureEnergy = -np.Inf, np.Inf                   # Max and Min FractureEnergy
+max_Lnuc, min_Lnuc = -np.inf, np.inf                                     # Nucleation length
+max_X, min_X = -np.inf, np.inf                                           # Nucleation position
+max_StrengthDrop, min_StrengthDrop = -np.inf, np.inf                     # Max and Min StrengthDrop
+max_StressDrop, min_StressDrop = -np.inf, np.inf                         # Max and Min StressDrop
+max_Front, min_Front = -np.inf, np.inf                                   # Max and Min RuptureTime
+max_Slip, min_Slip = -np.inf, np.inf                                     # Max and Min FinalSlip
+max_Logic, min_Logic = -np.inf, np.inf                                   # Reveal whether or not rupture at the position
+max_StrengthwithNuc, min_StrengthwithNuc = -np.inf, np.inf               # Reveal nucleation information
+max_RuptureEnergy, min_RuptureEnergy = -np.inf, np.inf                   # Max and Min FractureEnergy
 mu = 32.04                                                               #shear elasticity
 
 
@@ -62,7 +62,7 @@ class EarlyStopping:
         self.counter = 0
         self.best_score = None
         self.early_stop = False
-        self.val_loss_min = np.Inf
+        self.val_loss_min = np.inf
         self.delta = delta
 
     def __call__(self, val_loss, model):
