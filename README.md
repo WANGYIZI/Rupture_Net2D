@@ -9,3 +9,4 @@ The versions of relevant libraries we use are as follows:<br>
 python: <strong>3.9</strong><br>
 pytorch: <strong>1.11</strong><br>
 cuda: <strong>11.3</strong><br>
+matplotlib: the latest library version is okay
