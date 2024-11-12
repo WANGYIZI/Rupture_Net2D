@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 
+from tqdm import tqdm
+
 import torch
 from torch.utils.data import Dataset
 
@@ -18,6 +20,16 @@ max_RuptureEnergy, min_RuptureEnergy = -np.inf, np.inf                   # Max a
 mu = 32.04  # shear elasticity
 
 
+# Data normalization
+# TODO: from data instead of what they did?
+# The list represents the maximum or minimum values from left to right
+# max_Lnuc, max_X*, max_StrengthDrop, max_StressDrop,max_RuptureTime, max_Slip, max_Logic, max_StrengthwithNuc, max_RuptureEnergy
+column_max = [16.239269, 97.6, 125.064626, 66.054391, 59.647999, 86.057297, 1, 102.996661, 20855.37742025637]
+# column_max[8] = max(0.5 * Lnuc * StrengthDrop ^ 2)
+column_min = [0.003045, -44.8, 4.100412, -10.37305, 0.0, 0.0, 0, -10.37305, 0.7013907496639992]
+column_max[8] = column_max[8] / (1.158 * mu)
+# now column_max[8] = 0.5 * Lnuc * StrengthDrop ^ 2 / (1.158mu) = fracture energy
+column_min[8] = column_min[8] / (1.158 * mu)
 
 
 def read_200_lines(csv_files):
@@ -38,7 +50,8 @@ def load_data(debug=False):
     partial_fracture = 0
     data_frames = []
     for csv_file in csv_files_200lines:
-        print(csv_file)
+        if debug:
+            print(csv_file)
         df = read_200_lines((csv_file))
         if 'A' in csv_file:
             global_fracture += len(df) // 100
@@ -46,17 +59,20 @@ def load_data(debug=False):
             partial_fracture += len(df) // 100
         df["RuptureEnergy"] = (0.5 * df["Lnuc"] * df["StrengthDrop"] ** 2) / (1.158 * mu)  # FractureEnergy directly introduced
         df["RuptureEnergy"] = df["RuptureEnergy"].astype(float)  # Converts the data type to floating point
-        print(df.shape)
+        if debug:
+            print(df.shape)
         data_frames.append(df)
 
     for csv_file in csv_files_100lines:
-        print(csv_file)
+        if debug:
+            print(csv_file)
         df = read_100_lines((csv_file))
         df["Logic"] = 1.0
         df["StrengthwithNuc"] = 20.0
         df["RuptureEnergy"] = (0.5 * df["Lnuc"] * df["StrengthDrop"] ** 2) / (1.158 * mu)  # FractureEnergy directly introduced
         df["RuptureEnergy"] = df["RuptureEnergy"].astype(float)  # Converts the data type to floating point
-        print(df.shape)
+        if debug:
+            print(df.shape)
         data_frames.append(df)
     df = pd.concat(data_frames, axis=0, ignore_index=True)
 
@@ -68,74 +84,65 @@ def load_data(debug=False):
         print(df.head())
         print(df.describe())
 
-        print('-----------')
-        # Print Maximum and Minimum
-        print(f"Lnuc maximum: {max(df['Lnuc'])}, minimum: {min(df['Lnuc'])}")
-        print(f"X maximum: {max(df['X'])}, minimum: {min(df['X'])}")
-        print(f"StressDrop maximum: {max(df['StressDrop'])}, minimum: {min(df['StressDrop'])}")
-        print(f"StrengthDrop maximum: {max(df['StrengthDrop'])}, minimum: {min(df['StrengthDrop'])}")
-        print(f"Front maximum: {max(df['Front'])}, minimum: {min(df['Front'])}")
-        print(f"Slip maximum: {max(df['Slip'])}, minimum: {min(df['Slip'])}")
-        print(f"Logic maximum: {max(df['Logic'])}, minimum: {min(df['Logic'])}")
-        print(f"StringthwithNuc maximum: {max(df['StringthwithNuc'])}, minimum: {min(df['StringthwithNuc'])}")
-        print(f"RuptureEnergy maximum: {max(df['RuptureEnergy'])}, minimum: {min(df['RuptureEnergy'])}")
+        # print('-----------')
+        # # Print Maximum and Minimum
+        # print(f"Lnuc maximum: {max(df['Lnuc'])}, minimum: {min(df['Lnuc'])}")
+        # print(f"X maximum: {max(df['X'])}, minimum: {min(df['X'])}")
+        # print(f"StressDrop maximum: {max(df['StressDrop'])}, minimum: {min(df['StressDrop'])}")
+        # print(f"StrengthDrop maximum: {max(df['StrengthDrop'])}, minimum: {min(df['StrengthDrop'])}")
+        # print(f"Front maximum: {max(df['Front'])}, minimum: {min(df['Front'])}")
+        # print(f"Slip maximum: {max(df['Slip'])}, minimum: {min(df['Slip'])}")
+        # print(f"Logic maximum: {max(df['Logic'])}, minimum: {min(df['Logic'])}")
+        # print(f"StringthwithNuc maximum: {max(df['StrengthwithNuc'])}, minimum: {min(df['StrengthwithNuc'])}")
+        # print(f"RuptureEnergy maximum: {max(df['RuptureEnergy'])}, minimum: {min(df['RuptureEnergy'])}")
 
-    # Data normalization
-    # TODO: from data instead of what they did?
-    # The list represents the maximum or minimum values from left to right
-    # max_Lnuc, max_X*, max_StrengthDrop, max_StressDrop,max_RuptureTime, max_Slip, max_Logic, max_StrengthwithNuc, max_RuptureEnergy
-    column_max = [16.239269, 97.6, 125.064626, 66.054391, 59.647999, 86.057297, 1, 102.996661, 20855.37742025637]
-    # column_max[8] = max(0.5 * Lnuc * StrengthDrop ^ 2)
-    column_min = [0.003045, -44.8, 4.100412, -10.37305, 0.0, 0.0, 0, -10.37305, 0.7013907496639992]
-    column_max[8] = column_max[8] / (1.158 * mu)
-    # now column_max[8] = 0.5 * Lnuc * StrengthDrop ^ 2 / (1.158mu) = fracture energy
-    column_min[8] = column_min[8] / (1.158 * mu)
+
 
     # map each variable to the NN onto the interval [0,1]
     for i in range(0, 9):
-        df[:, i] = (df[:, i] - column_min[i]) / (column_max[i] - column_min[i])
+        df.iloc[:, i] = (df.iloc[:, i] - column_min[i]) / (column_max[i] - column_min[i])
 
     return df
 
 
-def make_blocks(df, block_size=100):
-    # INFO data separation into train and validation
-    # INFO the code first separates the data into blocks, then shuffles, then makes a df again, then numpy, then torch?
+def make_blocks(df, block_size=100, debug=False):
+    '''Splits df into blocks of size 100, and splits into train and test sets'''
 
     # compute number of blocks
     num_blocks = len(df) // block_size
 
+    def split_label(block):
+        return (
+            torch.tensor(block.iloc[:, [0, 1, 2, 3, -1]].values, dtype=torch.float32),
+            torch.tensor(block.iloc[:, 4:6].values, dtype=torch.float32)
+        )
+
     # Divide the df object into small blocks(one Block <--> one Sample)
-    blocks = [df[i * block_size:(i + 1) * block_size] for i in range(num_blocks)]
+    blocks = [split_label(df[i * block_size:(i + 1) * block_size]) for i in range(num_blocks)]
 
-    train_idx, test_idx = train_test_split(len(blocks), train_size=0.8)
+    train_idx, test_idx = train_test_split(range(len(blocks)), train_size=0.8)
 
-    train_blocks = blocks[train_idx]
-    test_blocks = blocks[test_idx]
+    train_blocks = [blocks[i] for i in train_idx]
+    test_blocks = [blocks[i] for i in test_idx]
 
-    print(f"Number of training set samples: {len(train_blocks)}")
-    print(f"Number of test set samples: {len(test_blocks)}")
+    if debug:
+        print(f"Number of training set samples: {len(train_blocks)}")
+        print(f"Number of test set samples: {len(test_blocks)}")
 
     return train_blocks, test_blocks
 
 
 class BlockDataset(Dataset):
-    def __init__(self, blocks):
+    '''Dataset for list of blocks. each block is (data, label) tensor created by make_blocks'''
 
-        self.dataX = []
-        self.dataY = []
-
-        for b in blocks:
-            self.dataX.append(torch.tensor(b[:, [0, 1, 2, 3, -1]], dtype=torch.float32))
-            self.dataY.append(torch.tensor(b[:, 4:6], dtype=torch.float32))
+    def __init__(self, blocks, debug=False):
+        self.blocks = blocks
 
     def __len__(self):
-        return len(self.dataX)
+        return len(self.blocks)
 
     def __getitem__(self, index):
-        return self.dataX[index], self.dataY[index]
-
-
+        return self.blocks[index]
 
 
 csv_files_200lines = [

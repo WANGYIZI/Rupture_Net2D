@@ -51,54 +51,71 @@ class TransformerEncoderBlock(nn.Module):
 class RuptureNet2D(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.num_heads = 8
-        self.embed_dim = 1024
-        self.dropout_pro = 0.1
-        self.hidden_dim = 2048
-        self.conv1 = nn.Conv1d(5, 256, kernel_size=1, stride=1, padding=0)  # In conv1d, kernel_size=1, stride=1, padding=0
-        self.conv2 = nn.Conv1d(256, 256, kernel_size=1, stride=1, padding=0)
+        # input convolution
+        self.conv_input = nn.Conv1d(5, config['conv1_dim'], kernel_size=1, stride=1, padding=0)
 
-        self.conv4 = nn.Conv1d(512, 512, kernel_size=1, stride=1, padding=0)
+        # first convolution block
+        self.conv1 = nn.ModuleList()
+        cur_dim = config['conv1_dim']
+        for i in range(config['conv1_layers']):
+            # square dimension in each step for concatination
+            self.conv1.append(nn.Conv1d(cur_dim, cur_dim, kernel_size=1, stride=1, padding=0))
+            cur_dim = 2 * cur_dim
 
-        # embeded_dim of Transformer is 1024
-        self.SelfAttention1 = TransformerEncoderBlock(embed_dim=1024, num_heads=8, dropout_pro=0.1, hidden_dim=2048)
-        self.SelfAttention2 = TransformerEncoderBlock(embed_dim=1024, num_heads=8, dropout_pro=0.1, hidden_dim=2048)
-        self.SelfAttention3 = TransformerEncoderBlock(embed_dim=1024, num_heads=8, dropout_pro=0.1, hidden_dim=2048)
-        self.SelfAttention4 = TransformerEncoderBlock(embed_dim=1024, num_heads=8, dropout_pro=0.1, hidden_dim=2048)
-        self.SelfAttention5 = TransformerEncoderBlock(embed_dim=1024, num_heads=8, dropout_pro=0.1, hidden_dim=2048)
-        self.SelfAttention6 = TransformerEncoderBlock(embed_dim=1024, num_heads=8, dropout_pro=0.1, hidden_dim=2048)
+        # Transformer blocks
+        self.attention_layers = nn.ModuleList()
+        for i in range(config['num_transformer_blocks']):
+            self.attention_layers.append(
+                TransformerEncoderBlock(
+                    embed_dim=cur_dim,
+                    num_heads=config['num_transformer_heads'],
+                    dropout_pro=config['dropout_pro'],
+                    hidden_dim=config['transformer_hidden_dim']
+                )
+            )
+
+        # second convolution layers
+        self.conv2 = nn.ModuleList()
+        self.conv2.append(nn.Conv1d(cur_dim, config['conv2_dim'], kernel_size=1, stride=1, padding=0))
+
+        self.conv_output = nn.Conv1d(config['conv2_dim'], 2, kernel_size=1, stride=1, padding=0)
+
         self.relu = nn.ReLU()
-        self.conv7 = nn.Conv1d(1024, 256, kernel_size=1, stride=1, padding=0)
-        self.conv8 = nn.Conv1d(256, 2, kernel_size=1, stride=1, padding=0)
+
+        # for scheduler
+        self.embed_dim = cur_dim
 
     def forward(self, x):
-        # CNN encoder
-        transpose1 = torch.transpose(x, 1, 2)
-        conv1 = self.relu(self.conv1(transpose1))
-        conv2 = self.relu(self.conv2(conv1))
-        cat1 = torch.cat([conv1, conv2], dim=1)
-        conv4 = self.relu(self.conv4(cat1))
-        cat2 = torch.cat([cat1, conv4], dim=1)
-        transpose2 = torch.transpose(cat2, 1, 2)
+        # CNN Encoder
+        # (N, 100, 5) -> (N, 5, 100)
+        x = torch.transpose(x, 1, 2)
+
+        # (N, 5, 100) -> (N, conv1_dim, 100)
+        x = self.relu(self.conv_input(x))
+
+        for layer in self.conv1:
+            new = self.relu(layer(x))
+            x = torch.cat([x, new], dim=1)
+
+        # (N, self.embed_dim, 100) -> (N, 100, self.embed_dim)
+        x = torch.transpose(x, 1, 2)
 
         # Transformer Processor
-        #  1th encoder_block
-        block1 = self.SelfAttention1(transpose2)
-        # 2nd encoder_block
-        block2 = self.SelfAttention2(block1)
-        # 3rd encoder_block
-        block3 = self.SelfAttention3(block2)
-        # 4th encoder_block
-        block4 = self.SelfAttention4(block3)
-        # 5th encoder_block
-        block5 = self.SelfAttention5(block4)
-        # 6th encoder_block
-        block6 = self.SelfAttention6(block5)
+        for layer in self.attention_layers:
+            # (N, 100, self.embed_dim) -> (N, 100, self.embed_dim)
+            x = layer(x)
 
         # CNN decoder
-        x = torch.transpose(block6, 1, 2)
-        conv7 = self.relu(self.conv7(x))
-        conv8 = self.conv8(conv7)
-        Front_Slip = torch.transpose(conv8, 1, 2)
-        output = self.relu(Front_Slip)
-        return output
+        # (N, 100, self.embed_dim) -> (N, self.embed_dim, 100)
+        x = torch.transpose(x, 1, 2)
+
+        # (N, self.embed_dim, 100) -> (N, conv2_dim, 100)
+        for layer in self.conv2:
+            x = self.relu(layer(x))
+
+        # (N, conv2_dim, 100) -> (N, 2, 100)
+        x = self.relu(self.conv_output(x))
+
+        # (N, 2, 100) -> (N, 100, 2)
+        x = torch.transpose(x, 1, 2)
+        return x
