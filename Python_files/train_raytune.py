@@ -122,8 +122,8 @@ def raytune_objective(config, train_data, max_epochs, device, debug=False):
         val_loss = test(model, device, criterion, val_dataloader, debug=debug)
 
         # Calculate the average training set loss
-        train_loss /= len(train_dataloader)
-        val_loss /= len(val_dataloader)
+        train_loss /= len(train_split)
+        val_loss /= len(val_split)
 
         # save relevant checkpoint data for restoring
         checkpoint_data = {
@@ -236,7 +236,7 @@ def run_raytune(result_dir, tuning_name, train_data, test_data, config_set, max_
 
     criterion = torch.nn.MSELoss(reduction='sum')
     test_loss = test(best_trained_model, device, criterion, test_dataloader)
-    test_loss = test_loss / len(test_dataloader)
+    test_loss = test_loss / len(test_data)
 
     print(f'Best trial test loss: {test_loss}')
 
