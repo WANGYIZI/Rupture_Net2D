@@ -59,16 +59,16 @@ def train(model, device, loss_func, train_dataloader, optimizer, scheduler, debu
 def test(model, device, loss_func, test_dataloader, debug=False):
     test_loss = 0.0
     model.eval()
-    with torch.no_grad():
-        for inputs, labels in tqdm(test_dataloader, desc='Testing epoch', leave=False, disable=not debug):
-            inputs = inputs.to(device)
-            labels = labels.to(device)
-            outputs = model(inputs)
-            loss = loss_func(outputs, labels)
 
-            test_loss += loss.item()
+    for inputs, labels in tqdm(test_dataloader, desc='Testing epoch', leave=False, disable=not debug):
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+        outputs = model(inputs)
+        loss = loss_func(outputs, labels)
 
-        return test_loss
+        test_loss += loss.item()
+
+    return test_loss
 
 
 def raytune_objective(config, train_data, max_epochs, device, debug=False):
