@@ -23,6 +23,8 @@ from datasets import BlockDataset, load_data, make_blocks
 import ray
 import ray.tune as tune
 
+import argparse
+
 
 def train(model, device, loss_func, train_dataloader, optimizer, scheduler, debug=False):
     # Get train loss
@@ -47,7 +49,8 @@ def train(model, device, loss_func, train_dataloader, optimizer, scheduler, debu
         loss.backward()
         optimizer.step()
 
-    scheduler.step()
+    if scheduler is not None:
+        scheduler.step()
 
     if debug:
         print(f'Current learning rate after epoch: {scheduler.get_last_lr()}')
@@ -86,6 +89,7 @@ def raytune_objective(config, train_data, max_epochs, device, debug=False):
     def lr_lambda(step, warmup_steps=10):
         return (model.embed_dim ** -0.5) * min((step + 1) ** (-0.5), (step + 1) * (warmup_steps ** -1.5))
 
+    # scheduler = None
     scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
 
     # Load checkpoint if it exists
@@ -100,7 +104,7 @@ def raytune_objective(config, train_data, max_epochs, device, debug=False):
 
             train_idx = checkpoint_state['train_idx']
             val_idx = checkpoint_state['val_idx']
-            start_epoch = checkpoint_state['epoch']
+            start_epoch = checkpoint_state['epoch'] + 1
             optimizer.load_state_dict(checkpoint_state['optimizer_state_dict'])
             scheduler.load_state_dict(checkpoint_state['scheduler_state_dict'])
             model.load_state_dict(model_state)
@@ -132,6 +136,7 @@ def raytune_objective(config, train_data, max_epochs, device, debug=False):
             'scheduler_state_dict': scheduler.state_dict(),
             'train_idx': train_idx,
             'val_idx': val_idx,
+            'config': config,
         }
 
         with tempfile.TemporaryDirectory() as checkpoint_dir:
@@ -150,7 +155,7 @@ def raytune_objective(config, train_data, max_epochs, device, debug=False):
             )
 
 
-def run_raytune(result_dir, tuning_name, train_data, test_data, config_set, max_epochs, device):
+def run_raytune(tuning_name, train_data, config_set, max_epochs, device):
     num_trials = 30
     path = Path('./raytune').resolve()
 
@@ -180,7 +185,7 @@ def run_raytune(result_dir, tuning_name, train_data, test_data, config_set, max_
         tuner = tune.Tuner.restore(
             str(path / tuning_name),
             trainable=trainable,
-            resume_errored=True,
+            restart_errored=True,
             resume_unfinished=True,
         )
     else:
@@ -206,6 +211,88 @@ def run_raytune(result_dir, tuning_name, train_data, test_data, config_set, max_
     # run raytune hyperparameter tuning
     result = tuner.fit()
 
+    return result
+
+
+def raytune_gridsearch_helper(config_gridsearch, train_data, max_epochs, device, debug=False):
+    """ rewrites gridsearch to match previous config """
+    config = {
+        'batch_size': 64,
+        'lr': 1e-4,
+        'conv1_dim': 256,
+        'conv1_layers': 2,  # 1st: 256 -> 256, 2nd: 512 -> 512
+        'num_transformer_blocks': config_gridsearch['grid'][0],  # 6,
+        'num_transformer_heads': config_gridsearch['grid'][1],  # 8,
+        'transformer_hidden_dim': config_gridsearch['grid'][2],  # 2048,
+        'conv2_dim': 256,  # embed-dim -> 256, 256 -> output
+        'dropout_pro': 0.1,
+    }
+
+    raytune_objective(config, train_data, max_epochs, device, debug=False)
+
+
+def run_raytune_gridsearch(tuning_name, train_data, config_set, max_epochs, device, raytune_address, raytune_storage):
+    num_trials = 1
+
+    raytune_storage = Path(raytune_storage)
+    # strategy to select best parameters
+    # scheduler = tune.schedulers.ASHAScheduler(
+    #     metric="val_loss",
+    #     mode="min",
+    #     max_t=max_epochs,
+    #     grace_period=5,
+    #     reduction_factor=2,
+    # )
+
+    ray.init(address=raytune_address)
+
+    # the training function with given resources per trial
+    trainable = tune.with_resources(
+        tune.with_parameters(
+            raytune_gridsearch_helper,
+            train_data=train_data,
+            max_epochs=max_epochs,
+            device=device,
+        ),
+        resources={'cpu': 10, 'gpu': 1},
+    )
+
+    # set up hyperparameter tuning or load if previously interrupted
+    if tune.Tuner.can_restore(raytune_storage / tuning_name):
+        print(f'Restoring from {raytune_storage / tuning_name}')
+        tuner = tune.Tuner.restore(
+            str(raytune_storage / tuning_name),
+            trainable=trainable,
+            restart_errored=True,
+            resume_unfinished=True,
+        )
+    else:
+        print(f'Creating new tuning in {raytune_storage}')
+        tuner = tune.Tuner(
+            trainable=trainable,
+            param_space=config_set,
+            run_config=ray.train.RunConfig(
+                storage_path=raytune_storage,
+                name=tuning_name,
+                checkpoint_config=ray.train.CheckpointConfig(
+                    num_to_keep=2,
+                    checkpoint_score_attribute='val_loss',
+                    checkpoint_score_order='min',
+                ),
+            ),
+            tune_config=tune.TuneConfig(
+                num_samples=num_trials,
+                # scheduler=scheduler,
+            ),
+        )
+
+    # run raytune hyperparameter tuning
+    result = tuner.fit()
+
+    return result
+
+
+def get_best_result(result, result_dir, device, test_data):
     result_df = result.get_dataframe(filter_metric='val_loss', filter_mode='min')
 
     # get best result
@@ -220,12 +307,14 @@ def run_raytune(result_dir, tuning_name, train_data, test_data, config_set, max_
     best_checkpoint = best_result.get_best_checkpoint(metric="val_loss", mode="min")
     with best_checkpoint.as_directory() as checkpoint_dir:
 
-        # data_path = Path(checkpoint_dir) / "data.pkl"
+        data_path = Path(checkpoint_dir) / "data.pkl"
         model_path = Path(checkpoint_dir) / 'model.pt'
 
         model_state = torch.load(model_path, weights_only=True)
         best_trained_model.load_state_dict(model_state)
         best_trained_model.to(device)
+
+        data_state = torch.load(data_path, weights_only=False)
 
     # final validation on test set
     test_dataloader = torch.utils.data.DataLoader(test_data,
@@ -244,21 +333,27 @@ def run_raytune(result_dir, tuning_name, train_data, test_data, config_set, max_
     print(f'Saving in {result_dir}')
     result_dir.mkdir(exist_ok=True, parents=True)
     torch.save(
-        {
-            'model_state_dict': model_state,
-            'model_params': best_result.config
-        },
-        result_dir / 'best_model_val_loss.pt'
+        model_state,
+        result_dir / 'best_model_state.pt'
+    )
+
+    # fix if config is missing
+    if 'config' not in data_state:
+        data_state['config'] = best_result.config
+
+    torch.save(
+        data_state,
+        result_dir / 'best_model_checkpoint_data.pkl',
     )
 
     result_df.to_csv(result_dir / 'all_results.csv')
     best_result_df.to_csv(result_dir / 'best_result.csv')
 
 
-if __name__ == '__main__':
+def main():
     debug = False
-    save_path = Path("./results")  # save model in "result" folder of the current directory
-    data_cache_path = Path("./cache/blocks.pt")
+    save_path = Path("./results").resolve()  # save model in "result" folder of the current directory
+    data_cache_path = Path("./cache/blocks.pt").resolve()
     torch.cuda.set_device(0)
 
     device = torch.device("cuda:0")
@@ -314,12 +409,99 @@ if __name__ == '__main__':
         'dropout_pro': tune.choice([0.1]),
     }
 
-    run_raytune(
-        result_dir=save_path.resolve(),
+    result = run_raytune(
         tuning_name='RuptureNet2D',
         train_data=train_dataset,
-        test_data=test_dataset,
         config_set=config_set,
         max_epochs=100,
         device=device
     )
+
+    get_best_result(result, save_path.resolve(), device, test_dataset)
+
+
+def main_gridsearch(raytune_address, raytune_storage):
+    debug = False
+    save_path = Path("./results").resolve()  # save model in "result" folder of the current directory
+    data_cache_path = Path("./cache/blocks.pt").resolve()
+    torch.cuda.set_device(0)
+
+    device = torch.device("cuda")
+
+    if (data_cache_path).exists():
+        print('Loading data from cache')
+        train_blocks, test_blocks = torch.load(data_cache_path, weights_only=False)
+        print(f'Number of training blocks: {len(train_blocks)}')
+        print(f'Number of test blocks: {len(test_blocks)}')
+    else:
+        df = load_data(debug=debug)
+        train_blocks, test_blocks = make_blocks(df, debug=debug)
+        data_cache_path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save((train_blocks, test_blocks), data_cache_path)
+
+    train_dataset = BlockDataset(train_blocks, debug=debug)
+    test_dataset = BlockDataset(test_blocks, debug=debug)
+
+    print('Finished Loading Data')
+
+    # test run function itself in case of debugging
+    if debug:
+        config = {
+            'batch_size': 64,
+            'lr': 1e-4,
+            'conv1_layers': 2,
+            'conv1_dim': 256,
+            'num_transformer_blocks': 6,
+            'num_transformer_heads': 8,
+            'transformer_hidden_dim': 2048,
+            'conv2_dim': 256,
+            'dropout_pro': 0.1,
+        }
+
+        raytune_objective(
+            config,
+            train_data=train_dataset,
+            max_epochs=10,
+            device=device,
+            debug=True,
+        )
+
+    config_set_gridsearch = {
+        'grid': tune.grid_search(
+            [
+                # (6, 8, 2048),
+                # (4, 8, 2048),
+                # (2, 8, 2048),
+                # (1, 8, 2048),
+
+                # (6, 4, 2048),
+                (6, 2, 2048),
+                # (6, 1, 2048),
+
+                # (6, 8, 1024),
+                # (6, 8, 512),
+                # (6, 8, 256),
+            ]
+        )
+    }
+
+    result = run_raytune_gridsearch(
+        tuning_name='RuptureNet2D',
+        train_data=train_dataset,
+        config_set=config_set_gridsearch,
+        max_epochs=100,
+        device=device,
+        raytune_address=args.address,
+        raytune_storage=args.storage,
+    )
+
+    # get_best_result(result, save_path.resolve(), device, test_dataset)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--address', default='localhost')
+    parser.add_argument('--storage', default=Path('./raytune').resolve())
+    args = parser.parse_args()
+
+    main_gridsearch(raytune_address=args.address, raytune_storage=args.storage)

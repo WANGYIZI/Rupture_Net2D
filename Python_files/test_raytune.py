@@ -49,7 +49,6 @@ def plot_loss(results_df, results_dir):
     # # Create the results folder (if it does not exist)
 
     # Save the vector image to the results folder
-    results_dir.mkdir(parents=True, exist_ok=True)
     plt.savefig(results_dir / 'loss_curve.svg', format='svg')
 
     # Display svg graphics
@@ -126,7 +125,7 @@ def compute_metrics(predictions, targets, block_size=100):
 #     print("Final slip Relative Error: " + str(relative_error_slip))
 
 
-def plot_curve(originals, predictions, targets, data_idx_start=3673, num_plots=1, block_size=100):
+def plot_curve(originals, predictions, targets, results_dir, data_idx_start=3673, num_plots=1, block_size=100):
     # Loop here to plot figures
     for sample_idx in range(data_idx_start, data_idx_start + num_plots):
 
@@ -166,13 +165,14 @@ def plot_curve(originals, predictions, targets, data_idx_start=3673, num_plots=1
         plt.plot(x, lnuc, label="Lnuc")  # Plot nucleation length
         plt.xlabel("X*")
         plt.legend()
-        faultLength = f"Fault length = {round(abs(x[0, 0] - x[-1, 0]), 2)}km"
+        # faultLength = f"Fault length = {round(abs(x[0, 0] - x[-1, 0]), 2)}km"
         plt.show()
 
         plt.plot(x, strengthdrop, label='StrengthDrop')  # Plot StressDrop StrengthDrop
         plt.plot(x, stressdrop, label='StressDrop')
         plt.xlabel('X*')
         plt.legend()
+
         plt.show()
 
         plt.plot(x, feature1_actual_front, label='Actual')  # Plot Rupture time(when Rupture front arrives)
@@ -183,6 +183,10 @@ def plot_curve(originals, predictions, targets, data_idx_start=3673, num_plots=1
         error_front = f'error={round(compute_error(feature1_pred_front, feature1_actual_front) * 100, 4)}%'
         plt.text(5, 3, error_front, fontsize=12, fontname='SimHei')
         plt.legend()
+
+        # Save the vector image to the results folder
+        plt.savefig(results_dir / 'front_example_curve.svg', format='svg')
+
         plt.show()
 
         feature2_actual_slip = targets[sample_idx, 0:block_size, 1] * (column_max[5] - column_min[5]) + column_min[5]  # Plot Rupture time(when Rupture front arrives)
@@ -198,6 +202,10 @@ def plot_curve(originals, predictions, targets, data_idx_start=3673, num_plots=1
         error_slip = f'error={round(compute_error(feature2_pred_slip, feature2_actual_slip) * 100, 4)}%'
         plt.text(5, 5, error_slip, fontsize=12, fontname='SimHei')
         plt.legend()
+
+        # Save the vector image to the results folder
+        plt.savefig(results_dir / 'slip_example_curve.svg', format='svg')
+
         plt.show()
 
         print("Error of slip is " + str(compute_error(feature2_pred_slip, feature2_actual_slip)))
@@ -207,8 +215,10 @@ def plot_curve(originals, predictions, targets, data_idx_start=3673, num_plots=1
 
 if __name__ == '__main__':
     results_dir = Path('./results')
+    results_dir.mkdir(exist_ok=True, parents=True)
     results_df_path = results_dir / 'best_result.csv'
-    checkpoint_file = results_dir / 'best_model_val_loss.pt'
+    model_state_file = results_dir / 'best_model_state.pt'
+    checkpoint_state_file = results_dir / 'best_model_checkpoint_data.pkl'
     data_cache_path = Path("./cache/blocks.pt")
 
     # load data
@@ -231,9 +241,10 @@ if __name__ == '__main__':
                                                   pin_memory=False)
 
     # load model
-    model_settings = torch.load(checkpoint_file, weights_only=False)
-    model = RuptureNet2D(model_settings['model_params'])
-    model.load_state_dict(model_settings['model_state_dict'])
+    model_state = torch.load(model_state_file, weights_only=True)
+    checkpoint_state = torch.load(checkpoint_state_file, weights_only=False)
+    model = RuptureNet2D(checkpoint_state['config'])
+    model.load_state_dict(model_state)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model.to(device)
@@ -247,4 +258,4 @@ if __name__ == '__main__':
     # plot everything
     plot_loss(results_df, results_dir)
     m = compute_metrics(predictions, targets)
-    plot_curve(originals, predictions, targets)
+    plot_curve(originals, predictions, targets, results_dir)
