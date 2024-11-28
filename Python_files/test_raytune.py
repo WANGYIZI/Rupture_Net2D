@@ -1,5 +1,8 @@
 from pathlib import Path
+
 import torch
+import ray.tune as tune
+
 from model import RuptureNet2D
 import pandas as pd
 
@@ -213,7 +216,59 @@ def plot_curve(originals, predictions, targets, results_dir, data_idx_start=3673
         print("Error of slip is " + str(compute_error(feature2_pred_slip, feature2_actual_slip)))
 
 
-if __name__ == '__main__':
+def get_metrics_from_raytune(raytune_result, results_file, device, test_data):
+
+    if isinstance(raytune_result, Path):
+        restored_tuner = tune.Tuner.restore(raytune_result)
+        result_grid = restored_tuner.get_results()
+    else:
+        result_grid = raytune_result
+
+    results_data = {
+        'config': [],
+        'metric': [],
+    }
+
+    for result in result_grid:
+        if result.error:
+            print('skipped result due to error')
+            continue
+
+        config = result.config
+
+        # load model
+        model = RuptureNet2D(config)
+        checkpoint = result.get_best_checkpoint(metric='val_loss', mode='min')
+        with checkpoint.as_directory() as checkpoint_dir:
+            data_path = Path(checkpoint_dir) / "data.pkl"
+            model_path = Path(checkpoint_dir) / 'model.pt'
+
+            model_state = torch.load(model_path, weights_only=True)
+            data_state = torch.load(data_path, weights_only=False)
+
+        model.load_state_dict(model_state)
+        model.to(device)
+        model.eval()
+
+        # final validation on test set
+        test_dataloader = torch.utils.data.DataLoader(test_data,
+                                                      batch_size=16,
+                                                      drop_last=False,
+                                                      num_workers=4,
+                                                      pin_memory=False)
+
+        originals, predictions, targets = compute_predictions(model, test_dataloader, device)
+        metrics = compute_metrics(predictions, targets)
+
+        results_file['config'].append(config)
+        results_file['metrics'].append(metrics)
+        # calculate metrics from paper and save them for each model!
+
+    # save resulting metrics in result_dir
+    results_data.to_csv(results_file)
+
+
+def main():
     results_dir = Path('./results')
     results_dir.mkdir(exist_ok=True, parents=True)
     results_df_path = results_dir / 'best_result.csv'
@@ -258,4 +313,9 @@ if __name__ == '__main__':
     # plot everything
     plot_loss(results_df, results_dir)
     m = compute_metrics(predictions, targets)
+    print(m)
     plot_curve(originals, predictions, targets, results_dir)
+
+
+if __name__ == '__main__':
+    main()

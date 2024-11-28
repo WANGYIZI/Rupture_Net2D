@@ -338,8 +338,8 @@ def get_best_result(result, result_dir, device, test_data):
     )
 
     # fix if config is missing
-    if 'config' not in data_state:
-        data_state['config'] = best_result.config
+    # if 'config' not in data_state:
+        # data_state['config'] = best_result.config
 
     torch.save(
         data_state,
@@ -420,7 +420,7 @@ def main():
     get_best_result(result, save_path.resolve(), device, test_dataset)
 
 
-def main_gridsearch(raytune_address, raytune_storage):
+def main_gridsearch(raytune_address, raytune_storage, raytune_name):
     debug = False
     save_path = Path("./results").resolve()  # save model in "result" folder of the current directory
     data_cache_path = Path("./cache/blocks.pt").resolve()
@@ -469,9 +469,9 @@ def main_gridsearch(raytune_address, raytune_storage):
     config_set_gridsearch = {
         'grid': tune.grid_search(
             [
-                # (6, 8, 2048),
+                # (6, 8, 2048), # todo again
                 # (4, 8, 2048),
-                # (2, 8, 2048),
+                # (2, 8, 2048), # todo again
                 # (1, 8, 2048),
 
                 # (6, 4, 2048),
@@ -486,7 +486,7 @@ def main_gridsearch(raytune_address, raytune_storage):
     }
 
     result = run_raytune_gridsearch(
-        tuning_name='RuptureNet2D',
+        tuning_name=raytune_name,
         train_data=train_dataset,
         config_set=config_set_gridsearch,
         max_epochs=100,
@@ -502,6 +502,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--address', default='localhost')
     parser.add_argument('--storage', default=Path('./raytune').resolve())
+    parser.add_argument('--name', default='RuptureNet2D')
     args = parser.parse_args()
 
-    main_gridsearch(raytune_address=args.address, raytune_storage=args.storage)
+    main_gridsearch(raytune_address=args.address, raytune_storage=args.storage, raytune_name=args.name)
