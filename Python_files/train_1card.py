@@ -679,6 +679,12 @@ import torch.distributed as dist
 
 
 save_path = "./results"  # save model in "result" folder of the current directory
+if not os.path.exists(save_path):
+    os.makedirs(save_path)
+    print(f"create new folder: {save_path}")
+else:
+    print(f"folder {save_path} already exists.")
+
 early_stopping = EarlyStopping(save_path)
 
 
