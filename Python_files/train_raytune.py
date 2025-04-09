@@ -1,13 +1,9 @@
-import torch.distributed as dist
-import matplotlib.pyplot as plt
-
 from torch.optim.lr_scheduler import LambdaLR
 import torch.optim as optim
 from torch.utils.data import DataLoader, SubsetRandomSampler
 
 from sklearn.model_selection import train_test_split
 
-import os
 import tempfile
 import torch
 import torch.nn as nn
@@ -155,9 +151,13 @@ def raytune_objective(config, train_data, max_epochs, device, debug=False):
             )
 
 
-def run_raytune(tuning_name, train_data, config_set, max_epochs, device):
-    num_trials = 30
-    path = Path('./raytune').resolve()
+def run_raytune(tuning_name, train_data, config_set, max_epochs, device, raytune_address, raytune_storage):
+    num_trials = 1
+
+    raytune_storage = Path(raytune_storage)
+
+    if raytune_address != 'localhost':
+        ray.init(address=raytune_address)
 
     # strategy to select best parameters
     scheduler = tune.schedulers.ASHAScheduler(
@@ -180,21 +180,21 @@ def run_raytune(tuning_name, train_data, config_set, max_epochs, device):
     )
 
     # set up hyperparameter tuning or load if previously interrupted
-    if tune.Tuner.can_restore(path / tuning_name):
-        print(f'Restoring from {path / tuning_name}')
+    if tune.Tuner.can_restore(raytune_storage / tuning_name):
+        print(f'Restoring from {raytune_storage / tuning_name}')
         tuner = tune.Tuner.restore(
-            str(path / tuning_name),
+            str(raytune_storage / tuning_name),
             trainable=trainable,
             restart_errored=True,
             resume_unfinished=True,
         )
     else:
-        print(f'Creating new tuning in {path}')
+        print(f'Creating new tuning in {raytune_storage}')
         tuner = tune.Tuner(
             trainable=trainable,
             param_space=config_set,
             run_config=ray.train.RunConfig(
-                storage_path=path,
+                storage_path=raytune_storage,
                 name=tuning_name,
                 checkpoint_config=ray.train.CheckpointConfig(
                     num_to_keep=2,
@@ -244,7 +244,8 @@ def run_raytune_gridsearch(tuning_name, train_data, config_set, max_epochs, devi
     #     reduction_factor=2,
     # )
 
-    ray.init(address=raytune_address)
+    if raytune_address != 'localhost':
+        ray.init(address=raytune_address)
 
     # the training function with given resources per trial
     trainable = tune.with_resources(
@@ -337,10 +338,6 @@ def get_best_result(result, result_dir, device, test_data):
         result_dir / 'best_model_state.pt'
     )
 
-    # fix if config is missing
-    # if 'config' not in data_state:
-        # data_state['config'] = best_result.config
-
     torch.save(
         data_state,
         result_dir / 'best_model_checkpoint_data.pkl',
@@ -350,10 +347,11 @@ def get_best_result(result, result_dir, device, test_data):
     best_result_df.to_csv(result_dir / 'best_result.csv')
 
 
-def main():
+def main_hyperparameter(raytune_address, raytune_storage, raytune_name):
     debug = False
     save_path = Path("./results").resolve()  # save model in "result" folder of the current directory
     data_cache_path = Path("./cache/blocks.pt").resolve()
+    raytune_storage = Path(raytune_storage).resolve()
     torch.cuda.set_device(0)
 
     device = torch.device("cuda:0")
@@ -410,11 +408,13 @@ def main():
     }
 
     result = run_raytune(
-        tuning_name='RuptureNet2D',
+        tuning_name=raytune_name,
         train_data=train_dataset,
         config_set=config_set,
         max_epochs=100,
-        device=device
+        device=device,
+        raytune_address=raytune_address,
+        raytune_storage=raytune_storage,
     )
 
     get_best_result(result, save_path.resolve(), device, test_dataset)
@@ -422,8 +422,8 @@ def main():
 
 def main_gridsearch(raytune_address, raytune_storage, raytune_name):
     debug = False
-    save_path = Path("./results").resolve()  # save model in "result" folder of the current directory
     data_cache_path = Path("./cache/blocks.pt").resolve()
+    raytune_storage = Path(raytune_storage).resolve()
     torch.cuda.set_device(0)
 
     device = torch.device("cuda")
@@ -440,7 +440,6 @@ def main_gridsearch(raytune_address, raytune_storage, raytune_name):
         torch.save((train_blocks, test_blocks), data_cache_path)
 
     train_dataset = BlockDataset(train_blocks, debug=debug)
-    test_dataset = BlockDataset(test_blocks, debug=debug)
 
     print('Finished Loading Data')
 
@@ -469,40 +468,43 @@ def main_gridsearch(raytune_address, raytune_storage, raytune_name):
     config_set_gridsearch = {
         'grid': tune.grid_search(
             [
-                # (6, 8, 2048), # todo again
-                # (4, 8, 2048),
-                # (2, 8, 2048), # todo again
-                # (1, 8, 2048),
+                (6, 8, 2048),
 
-                # (6, 4, 2048),
+                (4, 8, 2048),
+                (2, 8, 2048),
+                (1, 8, 2048),
+
+                (6, 4, 2048),
                 (6, 2, 2048),
-                # (6, 1, 2048),
+                (6, 1, 2048),
 
-                # (6, 8, 1024),
-                # (6, 8, 512),
-                # (6, 8, 256),
+                (6, 8, 1024),
+                (6, 8, 512),
+                (6, 8, 256),
             ]
         )
     }
 
-    result = run_raytune_gridsearch(
+    run_raytune_gridsearch(
         tuning_name=raytune_name,
         train_data=train_dataset,
         config_set=config_set_gridsearch,
         max_epochs=100,
         device=device,
-        raytune_address=args.address,
-        raytune_storage=args.storage,
+        raytune_address=raytune_address,
+        raytune_storage=raytune_storage,
     )
-
-    # get_best_result(result, save_path.resolve(), device, test_dataset)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--address', default='localhost')
-    parser.add_argument('--storage', default=Path('./raytune').resolve())
-    parser.add_argument('--name', default='RuptureNet2D')
+    parser.add_argument('--address', default='localhost', help='Raytune address')
+    parser.add_argument('--storage', default=Path('./raytune').resolve(), help='Raytune base storage')
+    parser.add_argument('--name', default='RuptureNet2D', help='Raytune trial folder name')
+    parser.add_argument('--gridsearch', default=False, action='store_true', help='Run gridsearch of the paper instead of hyperparamter search')
     args = parser.parse_args()
 
-    main_gridsearch(raytune_address=args.address, raytune_storage=args.storage, raytune_name=args.name)
+    if args.gridsearch:
+        main_gridsearch(raytune_address=args.address, raytune_storage=args.storage, raytune_name=args.name)
+    else:
+        main_hyperparameter(raytune_address=args.address, raytune_storage=args.storage, raytune_name=args.name)
