@@ -715,8 +715,12 @@ if __name__ == '__main__':
     print("successfully loaded data" + ':rank' + str(dist.get_rank()))
 
     # path to save your model
-    save_path = "./results"  # "results" directory to save your model
-
+    save_path = "./results"  # save model in "result" folder of the current directory
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+        print(f"create new folder: {save_path}")
+    else:
+        print(f"folder {save_path} already exists.")
 
 
 
